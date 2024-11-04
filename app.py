@@ -1,6 +1,5 @@
 from collections import deque
 from new_eval_board import create_game
-
 import customtkinter
 import random
 import sys
@@ -10,6 +9,9 @@ class Minesweeper:
     def __init__(self, master):
         # variables
         self.master = master
+        self.master.bind("<Key>", self.toggle_mode) # if the key "q" is pressed, the "Toggle" button should be triggered
+        self.master.bind("<space>", self.toggle_mode)
+        self.master.bind("<Button-2>", self.also_toggle_mode)
         self.board_size = 10
         self.max_board_size = 20
         self.cell_size = int((588 / self.board_size))
@@ -90,6 +92,15 @@ class Minesweeper:
             self.options[i] = option_button
 
 
+    def also_toggle_mode(self, event):
+        self.menu(5)
+
+
+    def toggle_mode(self, event):
+        if event.keysym == "space" or event.char == "q":
+            self.menu(5)
+
+
     # map the buttons "Restart", "Solve" and "Quit" to the actions
     def menu(self, index):
         # Restart
@@ -165,44 +176,8 @@ class Minesweeper:
                 self.buttons[i][j] = button # save the button, so we can map it to our button-values variable when clicking on it
 
 
-    # create mines
-    def create_mines(self, xrow, xcol):     # "xrow" and "xcol" are the cell that can't contain a mine (clicked cell + the 8 around it)
-        while len(self.mines) < self.num_mines:
-            row = random.randint(0, self.board_size - 1)
-            col = random.randint(0, self.board_size - 1)
-            # add "num_mines" amount of mines to the set
-            if (row, col) not in self.mines and not (row in xrow and col in xcol): # if not already a mine cell or not in the locked cells
-                self.mines.add((row, col))
-
-
-    # add all the mines to the board
-    def create_board(self):
-        for i in range(self.board_size):
-            for j in range(self.board_size):
-                if (i, j) in self.mines:    # if there should be a mine in that cell --> add mine
-                    self.board[i][j] = 9
-                else:
-                    self.board[i][j] = 0
-        self.calculate_board()
-
-
-    # calculate all the values for the board
-    def calculate_board(self):
-        for row in range(self.board_size):
-            for col in range(self.board_size):
-                if self.board[row][col] == 9:  # for each bomb check all the 8 cells around it and count the mines
-                    for r in range(-1, 2, 1):
-                        for c in range(-1, 2, 1):  # check the 8 cells around it
-                            if r == 0 and c == 0:  # if it checks the same field
-                                continue
-                            if (col + c) < 0 or (col + c) > (self.board_size - 1) or (row + r) < 0 or (row + r) > (self.board_size - 1):
-                                continue        # if out of range of the field
-                            elif self.board[row + r][col + c] != 9:  # if it's not a bomb, increase the count by one
-                                self.board[row + r][col + c] += 1
-
-
     # reveal the value (by changing the text of the button) when clicking on one
-    def reveal(self, row, col):
+    def reveal(self, row, col, event = None):
         # when user wants to set flags and not reveal fields
         if self.set_flags:
             self.set_or_remove_flag(row, col)
@@ -288,7 +263,7 @@ class Minesweeper:
 
 
     # set or remove the flag in the selected cell
-    def set_or_remove_flag(self, row, col):
+    def set_or_remove_flag(self, row, col, event = None):
         if (row, col) not in self.revealed and (row, col) not in self.flags:  # place or remove flag when clicking on the cell
             if (row, col) not in self.save_colors:  # save the color in that cell
                 self.save_colors[(row, col)] = self.buttons[row][col].cget("fg_color")  # store color for the cell in the dict
@@ -301,11 +276,12 @@ class Minesweeper:
 
     # delete flags, create mines and board
     def first_click_action(self, row, col):
-        for (r, c) in self.flags:  # delete all flags that were set before the first click
+        for (r, c) in self.flags.copy():  # delete all flags that were set before the first click
             self.buttons[r][c].configure(text="", fg_color=self.save_colors[(r, c)])
             self.flags.remove((r, c))
         self.first_click = False
         self.board, self.mines = create_game(row, col, self.board_size, self.num_mines)
+
 
     # check whether the player has won
     def check_for_end(self):
