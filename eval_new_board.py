@@ -114,25 +114,31 @@ def found_save(solved,i , board_size, revealed, all_neighbors, mines, board):
     return True
 
 
-def gaussian_elimination(matrix, solutions):
-    A = matrix.copy()
-    b = solutions.copy()
+
+# CHECK ICH NICHT
+def gaussian_elimination(A, b):
+    A = np.array(A, dtype=float)  # Sicherstellen, dass A als float array vorliegt
+    b = np.array(b, dtype=float)  # b ebenfalls als float array behandeln
     rows, cols = A.shape
 
     for i in range(min(rows, cols)):  # Gehe nur bis zur kleineren Dimension
         # Suche nach dem maximalen Wert in der aktuellen Spalte
         max_row = np.argmax(np.abs(A[i:, i])) + i
-        # Vertausche die aktuelle Zeile mit der Zeile mit dem größten Wert
-        A[[i, max_row]] = A[[max_row, i]]
-        b[[i, max_row]] = b[[max_row, i]]  # Vertausche die Lösungen
 
-        # Setze die Werte unterhalb der Hauptdiagonale auf 0
+        # Vertausche die aktuelle Zeile mit der Zeile mit dem größten Wert
+        if i != max_row:
+            A[[i, max_row]] = A[[max_row, i]]
+            b[[i, max_row]] = b[[max_row, i]]
+
+        # Vermeide Division durch 0
+        if A[i, i] == 0:
+            continue
+
+        # Setze die Werte unterhalb der Hauptdiagonale auf 0 (Elimination)
         for j in range(i + 1, rows):
-            if A[i, i] != 0:  # Vermeide Division durch Null
-                factor = A[j, i] / A[i, i]
-                A[j] = A[j] - factor * A[i]
-                if i < len(b):  # Stelle sicher, dass der Index innerhalb der Grenzen bleibt
-                    b[j] = b[j] - factor * b[i]  # Passe die Lösung entsprechend an
+            factor = A[j, i] / A[i, i]
+            A[j, i:] -= factor * A[i, i:]  # Nur den relevanten Teil der Zeile bearbeiten
+            b[j] -= factor * b[i]  # Passe die Lösung entsprechend an
 
     return A, b
 
